@@ -70,7 +70,7 @@ def create_post(request):
             return JsonResponse({'error': str(e)}, status=400)
     else:
         return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
-
+#ACTUAL VIEWS START HERE
 # Update views with validation and relational logic
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -119,3 +119,51 @@ class CommentListCreate(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+#Views for authentications
+from rest_framework.response import Response
+
+from django.contrib.auth import authenticate
+
+class LoginView(APIView):
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            return Response({"message": "Authentication successful!"})
+        else:
+            return Response({"message": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+#{
+#  "username": "new_user",
+#  "password": "secure_pass123"
+#}
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .permissions import IsTaskAssignee
+from .models import Task  # Make sure you import your Task model
+
+class TaskDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsTaskAssignee]
+
+    def get(self, request, pk):
+        task = Task.objects.get(pk=pk)
+        self.check_object_permissions(request, task)
+        return Response({"title": task.title, "description": task.description})
+
+
+
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+class SecureView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"message": "Secure endpoint accessed!"})
