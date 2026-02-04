@@ -5,37 +5,41 @@ from django.shortcuts import render
 #1. Retrieve all users
 
 from django.http import JsonResponse
-from .models import User
+from django.contrib.auth.models import User
 
-def get_users(request):
-    try:
-        users = list(User.objects.values('id', 'username', 'email', 'created_at'))
-        return JsonResponse(users, safe=False)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+#def get_users(request):
+ #   try:
+ #       users = list(User.objects.values('id', 'username', 'email', 'created_at'))
+ #       return JsonResponse(users, safe=False)
+ #   except Exception as e:
+ #       return JsonResponse({'error': str(e)}, status=500)
+
+
 #2. Create User
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import User
 
-@csrf_exempt
-def create_user(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user = User.objects.create(
-                username=data['username'],
-                email=data['email']
-            )
-            return JsonResponse(
-                {'id': user.id, 'message': 'User created successfully'},
-                status=201
-            )
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    else:
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+#@csrf_exempt
+#def create_user(request):
+#    if request.method == 'POST':
+#        try:
+#            data = json.loads(request.body)
+#            user = User.objects.create(
+#                username=data['username'],
+#                email=data['email']
+#            )
+#            return JsonResponse(
+#                {'id': user.id, 'message': 'User created successfully'},
+#                status=201
+#            )
+#        except Exception as e:
+#            return JsonResponse({'error': str(e)}, status=400)
+#    else:
+#        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
+
+
 #3. Get all posts
 
 from .models import Post
@@ -79,6 +83,7 @@ from .models import User, Post, Comment
 from .serializers import UserSerializer, PostSerializer, CommentSerializer
 
 
+
 class UserListCreate(APIView):
     def get(self, request):
         users = User.objects.all()
@@ -88,8 +93,11 @@ class UserListCreate(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            user = serializer.save()  # create_user handles hashing
+            return Response(
+                {"id": user.id, "username": user.username, "email": user.email},
+                status=status.HTTP_201_CREATED
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

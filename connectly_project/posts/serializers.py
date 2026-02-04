@@ -1,13 +1,17 @@
 from rest_framework import serializers
-from .models import User, Post, Comment
-
+from .models import  Post, Comment
+from django.contrib.auth.models import User
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)  # important: don’t expose passwords
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'created_at']
+        fields = ['id', 'username', 'email', 'password', 'date_joined']
 
-
+    def create(self, validated_data):
+        # Use create_user to hash the password
+        return User.objects.create_user(**validated_data)
 class PostSerializer(serializers.ModelSerializer):
     comments = serializers.StringRelatedField(
         many=True,
