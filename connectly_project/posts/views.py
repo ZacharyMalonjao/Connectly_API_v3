@@ -1,84 +1,23 @@
 from django.shortcuts import render
-
-# Create your views here.
-
-#1. Retrieve all users
-
-from django.http import JsonResponse
-from .models import User
-
-def get_users(request):
-    try:
-        users = list(User.objects.values('id', 'username', 'email', 'created_at'))
-        return JsonResponse(users, safe=False)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-#2. Create User
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import User
-
-@csrf_exempt
-def create_user(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            user = User.objects.create(
-                username=data['username'],
-                email=data['email']
-            )
-            return JsonResponse(
-                {'id': user.id, 'message': 'User created successfully'},
-                status=201
-            )
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    else:
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
-#3. Get all posts
-
-from .models import Post
-
-def get_posts(request):
-    try:
-        posts = list(Post.objects.values('id', 'content', 'author', 'created_at'))
-        return JsonResponse(posts, safe=False)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-#4. Create Post
-
-from .models import Post 
-
-@csrf_exempt
-def create_post(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            author = User.objects.get(id=data['author'])
-            post = Post.objects.create(
-                content=data['content'],
-                author=author
-            )
-            return JsonResponse(
-                {'id': post.id, 'message': 'Post created successfully'},
-                status=201
-            )
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'Author not found'}, status=404)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
-    else:
-        return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
-
-# Update views with validation and relational logic
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsPostAuthor
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User, Post, Comment
+from .models import Post, Comment
 from .serializers import UserSerializer, PostSerializer, CommentSerializer
+from django.contrib.auth import authenticate, login
 
-
+#METHOD INDEX
+#1. UserListCreate
+#2. PostListCreate
+#3. CommentsListCreate
+#4. Login
+#5. PostDetailView
+#6. ProtectedView
 class UserListCreate(APIView):
     def get(self, request):
         users = User.objects.all()
@@ -88,11 +27,13 @@ class UserListCreate(APIView):
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            user = serializer.save()  # hashed password automatically
+            return Response(
+                {"id": user.id, "username": user.username, "email": user.email},
+                status=status.HTTP_201_CREATED
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+    
 class PostListCreate(APIView):
     def get(self, request):
         posts = Post.objects.all()
@@ -119,3 +60,53 @@ class CommentListCreate(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LoginView(APIView):
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response(
+                {"error": "Username and password are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            # Log in the user to create a session cookie
+            login(request, user)
+            return Response(
+                {"message": "Authentication successful!",
+                 "user_id": user.id,
+                 "username": user.username},
+                status=status.HTTP_200_OK
+            )
+        else:
+            # Invalid credentials
+            return Response(
+                {"error": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+class PostDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsPostAuthor]
+
+    def get(self, request, pk):
+        try:
+            post = Post.objects.get(pk=pk)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found"}, status=404)
+
+        # Check object-level permissions
+        self.check_object_permissions(request, post)
+
+        return Response({"id": post.id, "content": post.content, "author": post.author.username})
+
+class ProtectedView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"message": f"Authenticated as {request.user.username}!"})

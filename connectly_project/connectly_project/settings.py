@@ -24,8 +24,8 @@ SECRET_KEY = 'django-insecure-^2+vjzc+_tk2w2e7ge=@eticlen=yqz(+rn-h01*fohy41l+s%
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
+#not sure if this is legal
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 # Application definition
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'posts',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -117,3 +118,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Enable HTTPS redirects
+SECURE_SSL_REDIRECT = True
+
+# Make session cookies secure (sent only over HTTPS)
+SESSION_COOKIE_SECURE = True
+
+# Make CSRF cookies secure (sent only over HTTPS)
+CSRF_COOKIE_SECURE = True
+
+# HTTP Strict Transport Security (HSTS)
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Strong password hashing
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+#not sure if this is legal
+CSRF_TRUSTED_ORIGINS = [
+    "https://127.0.0.1:8000",
+]
