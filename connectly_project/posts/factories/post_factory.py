@@ -1,5 +1,5 @@
 # from app.models import Post
-from models import Post
+from posts.models import Post
 
 class PostFactory:
     @staticmethod

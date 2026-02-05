@@ -12,7 +12,7 @@ from .serializers import UserSerializer, PostSerializer, CommentSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
-from factories.post_factory import PostFactory
+from posts.factories.post_factory import PostFactory
 
 #METHOD INDEX
 #1. UserListCreate
