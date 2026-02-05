@@ -10,6 +10,8 @@ from rest_framework import status
 from .models import Post, Comment
 from .serializers import UserSerializer, PostSerializer, CommentSerializer
 from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.views import APIView
 
 #METHOD INDEX
 #1. UserListCreate
@@ -61,34 +63,23 @@ class CommentListCreate(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate, login
+
 class LoginView(APIView):
     def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-
-        if not username or not password:
-            return Response(
-                {"error": "Username and password are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        username = request.data.get("username")
+        password = request.data.get("password")
 
         user = authenticate(username=username, password=password)
 
         if user is not None:
-            # Log in the user to create a session cookie
             login(request, user)
-            return Response(
-                {"message": "Authentication successful!",
-                 "user_id": user.id,
-                 "username": user.username},
-                status=status.HTTP_200_OK
-            )
-        else:
-            # Invalid credentials
-            return Response(
-                {"error": "Invalid credentials."},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({"message": "Authentication successful!"}, status=200)
+
+        return Response({"error": "Invalid credentials"}, status=401)
 
 class PostDetailView(APIView):
     permission_classes = [IsAuthenticated, IsPostAuthor]

@@ -7,4 +7,3 @@ urlpatterns = [
     path('', PostListCreate.as_view(), name='post-list-create'),
     path('comments/', CommentListCreate.as_view(), name='comment-list-create'),
 ]
-#test comment
