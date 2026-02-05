@@ -12,6 +12,7 @@ from .serializers import UserSerializer, PostSerializer, CommentSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
+from factories.post_factory import PostFactory
 
 #METHOD INDEX
 #1. UserListCreate
@@ -20,6 +21,27 @@ from rest_framework.views import APIView
 #4. Login
 #5. PostDetailView
 #6. ProtectedView
+
+class CreatePostView(APIView):
+    def post(self, request):
+        data = request.data
+        try:
+            post = PostFactory.create_post(
+                post_type=data['post_type'],
+                title=data['title'],
+                content=data.get('content', ''),
+                metadata=data.get('metadata', {})
+            )
+            return Response(
+                {'message': 'Post created successfully!', 'post_id': post.id}, 
+                status=status.HTTP_201_CREATED
+                )
+        except ValueError as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+                )
+        
 class UserListCreate(APIView):
     def get(self, request):
         users = User.objects.all()
