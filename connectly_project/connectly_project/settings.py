@@ -41,7 +41,12 @@ INSTALLED_APPS = [
     'posts',
     'django_extensions',
 ]
-
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'connectly_project.urls'
@@ -142,4 +148,5 @@ PASSWORD_HASHERS = [
 #not sure if this is legal
 CSRF_TRUSTED_ORIGINS = [
     "https://127.0.0.1:8000",
+    "https://localhost:8000",
 ]

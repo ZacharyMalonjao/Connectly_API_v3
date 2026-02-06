@@ -1,3 +1,5 @@
+#from django.utils.decorators import method_decorator
+#from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -13,6 +15,10 @@ from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from posts.factories.post_factory import PostFactory
+from singletons.logger_singleton import LoggerSingleton
+
+logger = LoggerSingleton().get_logger()
+
 
 #METHOD INDEX
 #1. UserListCreate
@@ -23,7 +29,10 @@ from posts.factories.post_factory import PostFactory
 #6. ProtectedView
 
 class CreatePostView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
+        
+
         data = request.data
         try:
             post = PostFactory.create_post(
@@ -32,11 +41,17 @@ class CreatePostView(APIView):
                 content=data.get('content', ''),
                 metadata=data.get('metadata', {})
             )
+            post.author = request.user  # <-- assign author automatically
+            post.save()
+
+            
+            logger.info(f"Post created successfully with ID {post.id}")
             return Response(
                 {'message': 'Post created successfully!', 'post_id': post.id}, 
                 status=status.HTTP_201_CREATED
                 )
         except ValueError as e:
+            logger.error(f"Post creation failed: {str(e)}")
             return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
@@ -57,19 +72,19 @@ class UserListCreate(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+#@method_decorator(ensure_csrf_cookie, name='dispatch')   
 class PostListCreate(APIView):
     def get(self, request):
         posts = Post.objects.all()
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#    def post(self, request):
+#        serializer = PostSerializer(data=request.data)
+#        if serializer.is_valid():
+#            serializer.save()
+#            return Response(serializer.data, status=status.HTTP_201_CREATED)
+#        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CommentListCreate(APIView):
@@ -99,8 +114,10 @@ class LoginView(APIView):
 
         if user is not None:
             login(request, user)
+            logger.info(f"User '{username}' logged in successfully.")
             return Response({"message": "Authentication successful!"}, status=200)
 
+        logger.warning(f"Failed login attempt for username '{username}'.")
         return Response({"error": "Invalid credentials"}, status=401)
 
 class PostDetailView(APIView):
@@ -110,13 +127,19 @@ class PostDetailView(APIView):
         try:
             post = Post.objects.get(pk=pk)
         except Post.DoesNotExist:
+            logger.error(f"Post {pk} not found for user '{request.user.username}'")
             return Response({"error": "Post not found"}, status=404)
 
         # Check object-level permissions
-        self.check_object_permissions(request, post)
+        try:
+            self.check_object_permissions(request, post)
+        except Exception as e:
+            logger.warning(f"Permission denied for user '{request.user.username}' on post {pk}")
+            raise e
 
+        logger.info(f"Post {pk} retrieved by user '{request.user.username}'")
         return Response({"id": post.id, "content": post.content, "author": post.author.username})
-
+    
 class ProtectedView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]

@@ -17,7 +17,14 @@ class Post(models.Model):
     content = models.TextField()  # The text content of the post
     author = models.ForeignKey(User, on_delete=models.CASCADE)  # The user who created the post
     created_at = models.DateTimeField(auto_now_add=True)  # Timestamp when the post was created
-
+    title = models.CharField(max_length=255, default='Untitled')
+    POST_TYPES = (
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('video', 'Video'),
+    )
+    post_type = models.CharField(max_length=10, choices=POST_TYPES, default='text')
+    metadata = models.JSONField(default=dict, blank=True) 
     def __str__(self):
         return self.content[:50]  # Return first 50 characters of the post
 
