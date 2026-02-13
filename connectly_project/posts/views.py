@@ -75,7 +75,9 @@ class UserListCreate(APIView):
 #@method_decorator(ensure_csrf_cookie, name='dispatch')   
 class PostListCreate(APIView):
     def get(self, request):
-        posts = Post.objects.all()
+        permission_classes = [IsAuthenticated]
+
+        posts = Post.objects.filter(author=request.user)
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
@@ -122,7 +124,7 @@ class LoginView(APIView):
 
 class PostDetailView(APIView):
     permission_classes = [IsAuthenticated, IsPostAuthor]
-
+    authentication_classes = [TokenAuthentication] 
     def get(self, request, pk):
         try:
             post = Post.objects.get(pk=pk)

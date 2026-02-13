@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'posts',
     'django_extensions',
+    'rest_framework.authtoken',
 ]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
