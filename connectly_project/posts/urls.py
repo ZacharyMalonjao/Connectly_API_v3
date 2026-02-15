@@ -19,11 +19,3 @@ urlpatterns = [
     path('posts/<int:post_id>/like/', PostLikeView.as_view(), name='post-like'),
     path('posts/<int:post_id>/likes/', PostLikesListView.as_view(), name='post-likes-list'),
 ]
-#index
-#1. login
-#2. users
-#3. get post
-#4. comments
-#5. create post
-#6. auth
-#7. individual posts
