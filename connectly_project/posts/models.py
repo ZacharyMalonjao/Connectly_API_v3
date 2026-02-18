@@ -15,6 +15,7 @@ from django.conf import settings
 #     def __str__(self):
 #         return self.username
 
+#Dont use out of the box user
 class User(AbstractUser):
     pass
 
