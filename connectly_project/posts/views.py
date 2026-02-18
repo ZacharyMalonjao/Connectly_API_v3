@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from posts.factories.post_factory import PostFactory
 from singletons.logger_singleton import LoggerSingleton
 
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 

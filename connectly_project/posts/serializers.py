@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Post, Comment
 from singletons.logger_singleton import LoggerSingleton
 from .models import Like
+#New user
 from django.contrib.auth import get_user_model
 User = get_user_model()
 

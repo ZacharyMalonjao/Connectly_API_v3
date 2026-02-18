@@ -15,9 +15,9 @@ from django.conf import settings
 #     def __str__(self):
 #         return self.username
 
-#Make new user thats not OOB
 class User(AbstractUser):
     pass
+
 
 class Post(models.Model):
     content = models.TextField()  # The text content of the post
