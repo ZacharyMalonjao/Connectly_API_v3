@@ -1,7 +1,7 @@
 #from django.utils.decorators import method_decorator
 #from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-from django.contrib.auth.models import User
+
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsPostAuthor
@@ -17,6 +17,9 @@ from django.views.decorators.csrf import csrf_exempt
 from posts.factories.post_factory import PostFactory
 from singletons.logger_singleton import LoggerSingleton
 
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 

@@ -1,5 +1,8 @@
+
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+from django.conf import settings
+
 
 # Create your models here.
 
@@ -12,10 +15,13 @@ from django.contrib.auth.models import User
 #     def __str__(self):
 #         return self.username
 
+class User(AbstractUser):
+    pass
+
 
 class Post(models.Model):
     content = models.TextField()  # The text content of the post
-    author = models.ForeignKey(User, related_name='posts', on_delete=models.CASCADE)  # The user who created the post
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='posts', on_delete=models.CASCADE)  # The user who created the post
     created_at = models.DateTimeField(auto_now_add=True)  # Timestamp when the post was created
     title = models.CharField(max_length=255, default='Untitled')
     POST_TYPES = (
@@ -31,7 +37,7 @@ class Post(models.Model):
 class Comment(models.Model):
     content = models.TextField()
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         related_name='comments',
         on_delete=models.CASCADE
 )
@@ -48,7 +54,7 @@ class Comment(models.Model):
 
 class Like(models.Model):
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         related_name='likes',
         on_delete=models.CASCADE
     )

@@ -146,8 +146,10 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
-#not sure if this is legal
+#vestigial
 CSRF_TRUSTED_ORIGINS = [
     "https://127.0.0.1:8000",
     "https://localhost:8000",
 ]
+
+AUTH_USER_MODEL = 'posts.User'
