@@ -1,11 +1,12 @@
 from django.urls import path
-from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, PostCommentsView, CreatePostCommentView, PostLikeView, PostLikesListView
+from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, PostCommentsView, CreatePostCommentView, PostLikeView, PostLikesListView, GoogleLoginView
 
 urlpatterns = [
     #utilities
     path('login/', LoginView.as_view(), name='login'),
     path('protected/', ProtectedView.as_view(), name='protected-view'),
     path('users/', UserListCreate.as_view(), name='user-list-create'),
+  
     #Posts
     path('', PostListCreate.as_view(), name='post-list'),
     path('create/', CreatePostView.as_view(), name='create-post'),
