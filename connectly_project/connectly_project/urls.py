@@ -15,10 +15,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from posts.views import GoogleLoginView
 from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),  # DRF login/logout
-    path('posts/', include('posts.urls')),  # Your posts app endpoints
+    path('posts/', include('posts.urls')),  # Your posts app endpoints  
+    path('auth/google/login/', GoogleLoginView.as_view()),
 ]

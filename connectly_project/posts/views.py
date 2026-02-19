@@ -13,23 +13,17 @@ from .models import Post, Comment
 from .serializers import UserSerializer, PostSerializer, CommentSerializer
 from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
-
 from posts.factories.post_factory import PostFactory
 from singletons.logger_singleton import LoggerSingleton
-
-
 from django.contrib.auth import get_user_model
 User = get_user_model()
-
-
-
-
-
 from .models import Post, Like
 from .serializers import LikeSerializer
-
-
 logger = LoggerSingleton().get_logger()
+
+from rest_framework.authtoken.models import Token
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 
 #METHOD INDEX
@@ -55,6 +49,50 @@ class LoginView(APIView):
 
         logger.warning(f"Failed login attempt for username '{username}'.")
         return Response({"error": "Invalid credentials"}, status=401)
+
+
+class GoogleLoginView(APIView):
+
+    def post(self, request):
+        google_token = request.data.get("id_token")
+
+        if not google_token:
+            return Response(
+                {"error": "No token provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Verify token with Google
+            idinfo = id_token.verify_oauth2_token(
+                google_token,
+                requests.Request()
+            )
+
+            email = idinfo.get("email")
+
+        except ValueError:
+            return Response(
+                {"error": "Invalid Google token"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Find or create user
+        user, created = User.objects.get_or_create(
+            username=email,
+            defaults={"email": email}
+        )
+
+        # Generate your API token
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response(
+            {
+                "token": token.key,
+                "email": user.email
+            },
+            status=status.HTTP_200_OK
+        )
 
 #========================model views============
      
@@ -232,3 +270,4 @@ class PostLikesListView(APIView):
         serializer = LikeSerializer(likes, many=True)
         logger.info(f"User '{request.user.username}' retrieved {likes.count()} likes for post {post_id}")
         return Response(serializer.data)
+    
