@@ -24,9 +24,9 @@ logger = LoggerSingleton().get_logger()
 from rest_framework.authtoken.models import Token
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import CursorPagination
 
-
-#METHOD INDEX
 #===================Utility views==================    
 class ProtectedView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -193,6 +193,36 @@ class PostListCreate(APIView):
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class FeedView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        #  Get all posts ordered by newest first
+        posts = Post.objects.all().order_by('-created_at')
+
+        # Setup pagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 5  # 5 posts per page
+
+        result_page = paginator.paginate_queryset(posts, request)
+
+        # Serialize paginated results
+        serializer = PostSerializer(result_page, many=True)
+
+        # Return paginated response
+        return paginator.get_paginated_response(serializer.data)
+
+
+
+
+
+
+
+
+
+
 #====Comment views======
 class PostCommentsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -253,13 +283,12 @@ class PostLikeView(APIView):
         logger.info(f"User '{request.user.username}' liked post {post_id} (Like ID: {like.id})")
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-
 class PostLikesListView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, post_id):
-        """Retrieve all likes for a post."""
+        """Returns all likes for a specific post."""
         try:
             post = Post.objects.get(id=post_id)
         except Post.DoesNotExist:
@@ -268,6 +297,25 @@ class PostLikesListView(APIView):
 
         likes = Like.objects.filter(post=post)
         serializer = LikeSerializer(likes, many=True)
-        logger.info(f"User '{request.user.username}' retrieved {likes.count()} likes for post {post_id}")
-        return Response(serializer.data)
+
+        logger.info(f"User '{request.user.username}' viewed likes for post {post_id}")
+        return Response(serializer.data, status=status.HTTP_200_OK)
+#Feed
+
+class FeedCursorPagination(CursorPagination):
+    page_size = 5
+    ordering = '-created_at'
+
+class FeedView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        posts = Post.objects.all()
+
+        paginator = FeedCursorPagination()
+        result_page = paginator.paginate_queryset(posts, request)
+
+        serializer = PostSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
     
