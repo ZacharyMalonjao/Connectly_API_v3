@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, PostCommentsView, CreatePostCommentView, PostLikeView, PostLikesListView, GoogleLoginView
+from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, PostCommentsView, CreatePostCommentView, PostLikeView,PostLikesListView, FeedView
 
 urlpatterns = [
     #utilities
@@ -19,4 +19,7 @@ urlpatterns = [
     #Likes
     path('posts/<int:post_id>/like/', PostLikeView.as_view(), name='post-like'),
     path('posts/<int:post_id>/likes/', PostLikesListView.as_view(), name='post-likes-list'),
+
+    #Feed
+    path('feed/', FeedView.as_view(), name='feed'),
 ]
