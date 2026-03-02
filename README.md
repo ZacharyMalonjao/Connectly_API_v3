@@ -9,8 +9,8 @@ The branch Milestone 1 contains the activies from the following weeks:
 * Week 5: Design Patterns
 
 The branch Milestone 2 Contains the following activities:
-Week 6: Likes and Comments 
-Week 7: Google OAuth
-Week 8: News Feed
+* Week 6: Likes and Comments 
+* Week 7: Google OAuth
+* Week 8: News Feed
 
 The JSON files form Postman and the Diagrams used have their links inputted in the Milestone 2 submission link.
