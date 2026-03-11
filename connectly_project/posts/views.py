@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsPostAuthor
+from .permissions import PostPrivacyPermission
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -114,7 +114,7 @@ class UserListCreate(APIView):
 
 #get post by pk (specific)
 class PostDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsPostAuthor]
+    permission_classes = [IsAuthenticated, PostPrivacyPermission]
     authentication_classes = [TokenAuthentication] 
     def get(self, request, pk):
         try:
