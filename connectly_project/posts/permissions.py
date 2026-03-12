@@ -38,3 +38,9 @@ class PostPrivacyPermission(BasePermission):
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.role == "admin"
+    
+#To Block guests from posting but temporary class
+class IsUserOrAdmin(BasePermission):
+ 
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ['user', 'admin']    
