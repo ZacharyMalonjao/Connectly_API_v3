@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission
-
+#this class becomes vestigial
 class IsPostAuthor(BasePermission):
     """
     Custom permission to only allow authors of a post to edit/delete it.
@@ -17,21 +17,24 @@ Guest  |  Public           |  no     |   no
 User   |  Public/Own posts |  yes    |   no
 Admin  |  All Posts        |  yes    |   yes
 """
-
+#Admin Posts
 class IsPostAuthorOrAdmin(BasePermission):
     def has_object_permission(self, request, view, obj):
-        # Admin can access all posts
-        if request.user.role == 'admin':
-            return True
-        # Authors can access their own posts
-        return obj.author == request.user
-    
+        if request.method == 'DELETE':
+            return request.user.role == 'admin'  # only admins can delete
+        return True  # GET is allowed; privacy handled separately
+
+#For viewing posts from users and guests    
 class PostPrivacyPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
-        if request.user.role == 'admin':
-            return True
-        if obj.privacy == 'public':
-            return True
-        # Private posts can be seen only by author
-        return obj.author == request.user
+            if request.user.role == 'admin':
+                return True
+            if obj.privacy == 'public':
+                return True
+            # private posts can be seen only by author
+            return obj.author == request.user
+#For Admin Only comment deletion
+class IsAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.role == "admin"
