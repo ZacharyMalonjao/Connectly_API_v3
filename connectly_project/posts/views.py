@@ -192,9 +192,9 @@ class PostListCreate(APIView):
         if user.role == 'admin':
             posts = Post.objects.all()
         elif user.role == 'user':
-            # Public posts + their own private posts
+            # Public posts + their own private posts, test
             posts = Post.objects.filter(
-                models.Q(privacy='public') | models.Q(author=user)
+                Q(privacy='public') | Q(author=user)
             )
         else:  # guest
             posts = Post.objects.filter(privacy='public')
