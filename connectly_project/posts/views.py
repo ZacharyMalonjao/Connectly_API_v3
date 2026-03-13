@@ -1,10 +1,10 @@
 #from django.utils.decorators import method_decorator
 #from django.views.decorators.csrf import ensure_csrf_cookie
 from django.shortcuts import render
-
+from django.db import models
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
-from .permissions import IsPostAuthor
+from .permissions import PostPrivacyPermission, IsUserOrAdmin, IsPostAuthorOrAdmin, IsAdmin
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -26,6 +26,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.pagination import CursorPagination
+from django.db.models import Q
+
 
 #===================Utility views==================    
 class ProtectedView(APIView):
@@ -114,7 +116,7 @@ class UserListCreate(APIView):
 
 #get post by pk (specific)
 class PostDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsPostAuthor]
+    permission_classes = [IsAuthenticated, PostPrivacyPermission,IsPostAuthorOrAdmin,]
     authentication_classes = [TokenAuthentication] 
     def get(self, request, pk):
         try:
@@ -131,10 +133,31 @@ class PostDetailView(APIView):
             raise e
 
         logger.info(f"Post {pk} retrieved by user '{request.user.username}'")
-        return Response({"id": post.id, "content": post.content, "author": post.author.username})
+        #return Response({"id": post.id, "content": post.content, "author": post.author.username})
+        serializer = PostSerializer(post)
+        return Response(serializer.data)
+    
+    def delete(self, request, pk):
+        try:
+            post = Post.objects.get(pk=pk)
+        except Post.DoesNotExist:
+            logger.error(f"Post {pk} not found for user '{request.user.username}'")
+            return Response({"error": "Post not found"}, status=404)
+
+        logger.info(f"Post {pk} retrieved by user '{request.user.username}'")
+
+        try:
+            self.check_object_permissions(request, post)
+        except Exception as e:
+            logger.warning(f"Permission denied for user '{request.user.username}' on post {pk}")
+            raise e
+
+        post.delete()
+        return Response({"message": "Post deleted"}, status=204)
 #create post 
 class CreatePostView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
     def post(self, request):
         
 
@@ -163,12 +186,24 @@ class CreatePostView(APIView):
                 )
 #get posts   
 class PostListCreate(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
-        permission_classes = [IsAuthenticated]
-
-        posts = Post.objects.filter(author=request.user)
+        
+        user = request.user
+        if user.role == 'admin':
+            posts = Post.objects.all()
+        elif user.role == 'user':
+            # Public posts + their own private posts, test
+            posts = Post.objects.filter(
+                Q(privacy='public') | Q(author=user)
+            )
+        else:  # guest
+            posts = Post.objects.filter(privacy='public')
+            #posts = Post.objects.filter(author=request.user)
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
+        
+        
 
 #    def post(self, request):
 #        serializer = PostSerializer(data=request.data)
@@ -193,31 +228,22 @@ class PostListCreate(APIView):
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class FeedView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+#Delete posts, only admin
 
-    def get(self, request):
+# class DeletePostView(APIView):
+#     permission_classes = [IsAuthenticated]
 
-        #  Get all posts ordered by newest first
-        posts = Post.objects.all().order_by('-created_at')
+#     def delete(self, request, pk):
+#         try:
+#             post = Post.objects.get(pk=pk)
+#         except Post.DoesNotExist:
+#             return Response({"error": "Post not found"}, status=404)
 
-        # Setup pagination
-        paginator = PageNumberPagination()
-        paginator.page_size = 5  # 5 posts per page
+#         if request.user.role != 'admin':
+#             return Response({"error": "Permission denied"}, status=403)
 
-        result_page = paginator.paginate_queryset(posts, request)
-
-        # Serialize paginated results
-        serializer = PostSerializer(result_page, many=True)
-
-        # Return paginated response
-        return paginator.get_paginated_response(serializer.data)
-
-
-
-
-
+#         post.delete()
+#         return Response({"message": "Post deleted"}, status=204)
 
 
 
@@ -225,6 +251,8 @@ class FeedView(APIView):
 
 #====Comment views======
 class PostCommentsView(APIView):
+    #Almost forgot authentication, bug fixed
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, post_id):
@@ -237,12 +265,13 @@ class PostCommentsView(APIView):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 class CreatePostCommentView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
 
     def post(self, request, post_id):
         try:
             post = Post.objects.get(id=post_id)
+            print("ROLE:", request.user.role)
         except Post.DoesNotExist:
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -255,13 +284,28 @@ class CreatePostCommentView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
+class DeleteCommentView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def delete(self, request, post_id, comment_id):
+        try:
+            comment = Comment.objects.get(id=comment_id, post_id=post_id)
+        except Comment.DoesNotExist:
+            logger.error(f"Comment {comment_id} not found for post {post_id}")
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        comment.delete()
+        logger.info(f"Comment {comment_id} deleted by admin '{request.user.username}'")
+        return Response({"message": "Comment deleted"}, status=status.HTTP_204_NO_CONTENT) 
 #====Likes views
 
 
 class PostLikeView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
 
     def post(self, request, post_id):
         """Allows a user to like a post."""
@@ -311,7 +355,19 @@ class FeedView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        posts = Post.objects.all()
+        user = request.user
+
+        # RBAC + privacy filtering
+        if user.role == 'admin':
+            posts = Post.objects.all()
+        elif user.role == 'user':
+            # Public posts + user's own private posts
+            posts = Post.objects.filter(Q(privacy='public') | Q(author=user))
+        else:  # guest
+            posts = Post.objects.filter(privacy='public')
+
+        # Order by created_at descending
+        posts = posts.order_by('-created_at')
 
         paginator = FeedCursorPagination()
         result_page = paginator.paginate_queryset(posts, request)
@@ -319,3 +375,4 @@ class FeedView(APIView):
         serializer = PostSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
+#test comment

@@ -21,4 +21,5 @@ class PostFactory:
             content=content,
             post_type=post_type,
             metadata=metadata
+           #model already default saves it as public
         )

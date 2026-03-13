@@ -16,7 +16,15 @@ from django.conf import settings
 #         return self.username
 
 class User(AbstractUser):
-    pass
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('user', 'User'),
+        ('guest', 'Guest'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+
+    def __str__(self):
+        return f"{self.username} ({self.role})"
 
 
 class Post(models.Model):
@@ -31,9 +39,15 @@ class Post(models.Model):
     )
     post_type = models.CharField(max_length=10, choices=POST_TYPES, default='text')
     metadata = models.JSONField(default=dict, blank=True) 
-    def __str__(self):
-        return self.content[:50]  # Return first 50 characters of the post
+    PRIVACY_CHOICES = [
+        ('public', 'Public'),
+        ('private', 'Private'),
+    ]
+    privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='public')
 
+    def __str__(self):
+        return f"{self.author.username}: {self.content[:30]} ({self.privacy})" # Return first 50 characters of the post
+    
 class Comment(models.Model):
     content = models.TextField()
     user = models.ForeignKey(
