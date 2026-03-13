@@ -305,7 +305,7 @@ class DeleteCommentView(APIView):
 
 class PostLikeView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
 
     def post(self, request, post_id):
         """Allows a user to like a post."""
@@ -375,3 +375,4 @@ class FeedView(APIView):
         serializer = PostSerializer(result_page, many=True)
         return paginator.get_paginated_response(serializer.data)
     
+#test comment
