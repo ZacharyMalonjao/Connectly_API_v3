@@ -156,7 +156,8 @@ class PostDetailView(APIView):
         return Response({"message": "Post deleted"}, status=204)
 #create post 
 class CreatePostView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
     def post(self, request):
         
 
@@ -227,36 +228,6 @@ class PostListCreate(APIView):
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
 #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class FeedView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-
-        if user.role == 'admin':
-            posts = Post.objects.all().order_by('-created_at')
-        elif user.role == 'user':
-            # Public posts + own private posts
-            posts = Post.objects.filter(
-                models.Q(privacy='public') | models.Q(author=user)
-            ).order_by('-created_at')
-        else:  # guest
-            posts = Post.objects.filter(privacy='public').order_by('-created_at')
-       
-        # Setup pagination
-        paginator = PageNumberPagination()
-        paginator.page_size = 5  # 5 posts per page
-
-        result_page = paginator.paginate_queryset(posts, request)
-
-        # Serialize paginated results
-        serializer = PostSerializer(result_page, many=True)
-
-        # Return paginated response
-        return paginator.get_paginated_response(serializer.data)
-
-
 #Delete posts, only admin
 
 # class DeletePostView(APIView):
@@ -280,6 +251,8 @@ class FeedView(APIView):
 
 #====Comment views======
 class PostCommentsView(APIView):
+    #Almost forgot authentication, bug fixed
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, post_id):
@@ -292,12 +265,13 @@ class PostCommentsView(APIView):
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 class CreatePostCommentView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsUserOrAdmin]
 
     def post(self, request, post_id):
         try:
             post = Post.objects.get(id=post_id)
+            print("ROLE:", request.user.role)
         except Post.DoesNotExist:
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -310,6 +284,8 @@ class CreatePostCommentView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class DeleteCommentView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, IsAdmin]
