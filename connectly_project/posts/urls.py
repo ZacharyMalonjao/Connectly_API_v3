@@ -23,4 +23,5 @@ urlpatterns = [
 
     #Feed
     path('feed/', FeedView.as_view(), name='feed'),
+   
 ]
