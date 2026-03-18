@@ -16,19 +16,19 @@ from django.views.decorators.csrf import csrf_exempt
 from posts.factories.post_factory import PostFactory
 from singletons.logger_singleton import LoggerSingleton
 from django.contrib.auth import get_user_model
-User = get_user_model()
+from rest_framework.exceptions import ValidationError
 from .models import Post, Like
 from .serializers import LikeSerializer
-logger = LoggerSingleton().get_logger()
-
+from django.core.cache import cache
+from singletons.config_manager import ConfigManager
 from rest_framework.authtoken.models import Token
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.pagination import CursorPagination
 from django.db.models import Q
-
-
+logger = LoggerSingleton().get_logger()
+User = get_user_model()
 #===================Utility views==================    
 class ProtectedView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -99,6 +99,9 @@ class GoogleLoginView(APIView):
 #========================model views============
      
 class UserListCreate(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated, IsAdmin]
     def get(self, request):
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
@@ -345,10 +348,46 @@ class PostLikesListView(APIView):
         logger.info(f"User '{request.user.username}' viewed likes for post {post_id}")
         return Response(serializer.data, status=status.HTTP_200_OK)
 #Feed
-
+"""
 class FeedCursorPagination(CursorPagination):
     page_size = 5
     ordering = '-created_at'
+    def __init__(self):
+        super().__init__()
+        config = ConfigManager()
+        self.page_size = config.get_setting("DEFAULT_PAGE_SIZE")
+"""
+
+
+class FeedPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+
+    def __init__(self):
+        super().__init__()
+        config = ConfigManager()
+        self.page_size = config.get_setting("DEFAULT_PAGE_SIZE")
+        self.max_page_size = config.get_setting("MAX_PAGE_SIZE")
+    def get_page_size(self, request):
+        page_size = request.query_params.get(self.page_size_query_param)
+
+        if page_size is not None:
+            try:
+                page_size = int(page_size)
+
+                if page_size <= 0:
+                    raise ValidationError("Page size must be greater than 0.")
+
+                if page_size > self.max_page_size:
+                    raise ValidationError(f"Page size cannot exceed {self.max_page_size}.")
+
+            except ValueError:
+                raise ValidationError("Page size must be a valid integer.")
+
+        return super().get_page_size(request)
+
+
+
+
 
 class FeedView(APIView):
     authentication_classes = [TokenAuthentication]
@@ -356,6 +395,19 @@ class FeedView(APIView):
 
     def get(self, request):
         user = request.user
+        #Caching logic
+        page = request.query_params.get('page', 1)
+        page_size = request.query_params.get('page_size', 'default')
+
+        cache_key = f"feed_{user.id}_{page}_{page_size}"
+
+        # Try cache first
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            logger.info(f"CACHE HIT for key: {cache_key}")
+            return Response(cached_response)
+
+        logger.info(f"CACHE MISS for key: {cache_key}")
 
         # RBAC + privacy filtering
         if user.role == 'admin':
@@ -369,10 +421,12 @@ class FeedView(APIView):
         # Order by created_at descending
         posts = posts.order_by('-created_at')
 
-        paginator = FeedCursorPagination()
+        paginator = FeedPagination()
         result_page = paginator.paginate_queryset(posts, request)
 
         serializer = PostSerializer(result_page, many=True)
-        return paginator.get_paginated_response(serializer.data)
-    
+        response = paginator.get_paginated_response(serializer.data)
+        cache.set(cache_key, response.data, timeout=60)
+        return response
+        
 #test comment
