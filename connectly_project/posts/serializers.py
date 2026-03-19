@@ -26,10 +26,13 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = ['id', 'content', 'author', 'created_at', 'privacy', 'comments']
         read_only_fields = ['author'] 
+
+
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'content', 'user', 'post', 'timestamp']
+        read_only_fields = ['id', 'timestamp', 'user', 'post']
 
     def validate_post(self, value):
         if not Post.objects.filter(id=value.id).exists():
@@ -40,6 +43,15 @@ class CommentSerializer(serializers.ModelSerializer):
         if not User.objects.filter(id=value.id).exists():
             raise serializers.ValidationError("User not found.")
         return value
+    def create(self, validated_data):
+        request = self.context['request']
+        post = self.context['post']
+
+        return Comment.objects.create(
+            user=request.user,
+            post=post,
+            **validated_data
+        )
     
 
 logger = LoggerSingleton().get_logger()

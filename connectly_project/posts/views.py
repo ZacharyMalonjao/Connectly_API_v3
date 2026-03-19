@@ -4,7 +4,7 @@ from django.shortcuts import render
 from django.db import models
 from django.contrib.auth import authenticate
 from rest_framework.permissions import IsAuthenticated
-from .permissions import PostPrivacyPermission, IsUserOrAdmin, IsPostAuthorOrAdmin, IsAdmin
+from .permissions import PostPrivacyPermission, IsNotGuest, IsPostAuthorOrAdmin, IsAdmin
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -25,7 +25,7 @@ from rest_framework.authtoken.models import Token
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.pagination import CursorPagination
+
 from django.db.models import Q
 logger = LoggerSingleton().get_logger()
 User = get_user_model()
@@ -160,7 +160,7 @@ class PostDetailView(APIView):
 #create post 
 class CreatePostView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsUserOrAdmin]
+    permission_classes = [IsAuthenticated, IsNotGuest]
     def post(self, request):
         
 
@@ -253,10 +253,10 @@ class PostListCreate(APIView):
 
 
 #====Comment views======
-class PostCommentsView(APIView):
+class CommentListCreateView(APIView):
     #Almost forgot authentication, bug fixed
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsNotGuest]
 
     def get(self, request, post_id):
         try:
@@ -264,13 +264,9 @@ class PostCommentsView(APIView):
         except Post.DoesNotExist:
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        comments = Comment.objects.filter(post=post)
+        comments = Comment.objects.filter(post=post).order_by('-timestamp')
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
-class CreatePostCommentView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsUserOrAdmin]
-
     def post(self, request, post_id):
         try:
             post = Post.objects.get(id=post_id)
@@ -279,16 +275,35 @@ class CreatePostCommentView(APIView):
             return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data.copy()
-        data['user'] = request.user.id  # assign logged-in user as author
-        data['post'] = post.id  # assign post ID
+       
 
-        serializer = CommentSerializer(data=data)
+        serializer = CommentSerializer(
+            data=request.data,
+            context={'request': request, 'post': post}
+        )
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class CommentDetailView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAdmin]
 
 
+    def delete(self, request, post_id, comment_id):
+        try:
+            comment = Comment.objects.get(id=comment_id, post_id=post_id)
+        except Comment.DoesNotExist:
+            logger.error(f"Comment {comment_id} not found for post {post_id}")
+            return Response({"error": "Comment not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        comment.delete()
+        logger.info(f"Comment {comment_id} deleted by admin '{request.user.username}'")
+        return Response({"message": "Comment deleted"}, status=status.HTTP_204_NO_CONTENT) 
+    
+
+"""
 class DeleteCommentView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, IsAdmin]
@@ -303,12 +318,13 @@ class DeleteCommentView(APIView):
         comment.delete()
         logger.info(f"Comment {comment_id} deleted by admin '{request.user.username}'")
         return Response({"message": "Comment deleted"}, status=status.HTTP_204_NO_CONTENT) 
-#====Likes views
+"""
+        #====Likes views
 
 
 class PostLikeView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsUserOrAdmin]
+    permission_classes = [IsAuthenticated, IsNotGuest]
 
     def post(self, request, post_id):
         """Allows a user to like a post."""

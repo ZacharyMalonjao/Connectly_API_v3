@@ -38,11 +38,22 @@ class PostPrivacyPermission(BasePermission):
 class IsAdmin(BasePermission):
     def has_permission(self, request, view):
         return request.user.role == "admin"
-    
-#To Block guests from posting but temporary class
-class IsUserOrAdmin(BasePermission):
- 
+#Blocking guests from posting
+class IsNotGuest(BasePermission):
+    """
+    Only allows non-guest users to perform the action
+    Assumes user.role or user.is_guest exists
+    """
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return request.user.role in ["user", "admin"]
+        # adjust based on your User model
+        return request.user.role != 'guest'  # or request.user.is_guest == False
+#Blocking users to felete whats not their comment
+
+# class IsCommentAuthorOrAdmin(BasePermission):
+#     """
+#     Allows delete if:
+#     - user is admin, OR
+#     - user is the author of the comment
+#     """
+#     def has_object_permission(self, request, view, obj):
+#         return request.user.role == "admin" or obj.user == request.user

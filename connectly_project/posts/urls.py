@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, PostCommentsView, CreatePostCommentView, PostLikeView,PostLikesListView, FeedView,DeleteCommentView
+from .views import UserListCreate, PostListCreate, PostDetailView, LoginView, ProtectedView, CreatePostView, CommentListCreateView,  PostLikeView,PostLikesListView, FeedView,CommentDetailView
 
 urlpatterns = [
     #utilities
@@ -14,9 +14,11 @@ urlpatterns = [
     
 
     #Comments
-    path('<int:post_id>/comments/', PostCommentsView.as_view(), name='post-comments'),
-    path('<int:post_id>/comment/', CreatePostCommentView.as_view(), name='create-post-comment'),
-    path('<int:post_id>/comments/<int:comment_id>/delete/',DeleteCommentView.as_view(),name='delete-comment'),
+    path('<int:post_id>/comments/', CommentListCreateView.as_view(), name='post-comments'),
+    #path('<int:post_id>/comment/', CreatePostCommentView.as_view(), name='create-post-comment'),
+    #path('<int:post_id>/comments/<int:comment_id>/delete/',DeleteCommentView.as_view(),name='delete-comment'),
+    path('<int:post_id>/comments/<int:comment_id>/',CommentDetailView.as_view(),name='delete-comment'),
+    
     #Likes
     path('<int:post_id>/like/', PostLikeView.as_view(), name='post-like'),
     path('<int:post_id>/likes/', PostLikesListView.as_view(), name='post-likes-list'),
