@@ -18,7 +18,7 @@ urlpatterns = [
     #path('<int:post_id>/comment/', CreatePostCommentView.as_view(), name='create-post-comment'),
     #path('<int:post_id>/comments/<int:comment_id>/delete/',DeleteCommentView.as_view(),name='delete-comment'),
     path('<int:post_id>/comments/<int:comment_id>/',CommentDetailView.as_view(),name='delete-comment'),
-    
+
     #Likes
     path('<int:post_id>/like/', PostLikeView.as_view(), name='post-like'),
     path('<int:post_id>/likes/', PostLikesListView.as_view(), name='post-likes-list'),
