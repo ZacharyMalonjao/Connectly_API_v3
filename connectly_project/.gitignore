@@ -1,3 +1,8 @@
 # Ignore Python cache
 #__pycache__/
 #*.pyc
+*.cert.key
+*.cert.pem
+*.key.pem
+*.cert.crt
+#testing
