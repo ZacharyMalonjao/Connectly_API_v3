@@ -170,7 +170,8 @@ class CreatePostView(APIView):
                 post_type=data['post_type'],
                 title=data['title'],
                 content=data.get('content', ''),
-                metadata=data.get('metadata', {})
+                metadata=data.get('metadata', {}),
+                privacy=data.get('privacy', 'public')
             )
             post.author = request.user  # <-- assign author automatically
             post.save()

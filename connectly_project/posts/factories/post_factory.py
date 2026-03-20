@@ -3,7 +3,7 @@ from posts.models import Post
 
 class PostFactory:
     @staticmethod
-    def create_post(post_type, title, content='', metadata=None):
+    def create_post(post_type, title, content='', metadata=None,privacy='public'):
         if metadata is None:
             metadata = {}
 
@@ -20,6 +20,7 @@ class PostFactory:
             title=title,
             content=content,
             post_type=post_type,
-            metadata=metadata
-           #model already default saves it as public
+            metadata=metadata,
+            privacy=privacy
+           
         )
